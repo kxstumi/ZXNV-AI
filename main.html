@@ -9,26 +9,197 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Code Syntax Highlighting Theme -->
     <link id="highlight-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;800;900&family=Lexend:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg: #050505;
+            --fg: #ffffff;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.2);
+            --surface: rgba(255, 255, 255, 0.03);
+            --chat-text-size: 15px;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* BACKGROUND PATTERNS */
+        body.bg-pattern-radial { background-image: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.05) 0%, transparent 70%); }
+        body.bg-pattern-grid { background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 40px 40px; }
+        body.bg-pattern-dots { background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px; }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-lexend { font-family: 'Lexend', sans-serif; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        @keyframes bubblePop {
+            0% { opacity: 0; transform: scale(0.95) translateY(15px); }
+            60% { transform: scale(1.02) translateY(-2px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .msg-enter { animation: bubblePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform-origin: bottom left; }
+        .msg-enter-user { animation: bubblePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform-origin: bottom right; }
+        
+        .smooth-transition { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        .prose pre { 
+            border-radius: 16px; 
+            border: 1px solid var(--border); 
+            background: #000000 !important;
+            position: relative; 
+            padding: 1.25rem;
+        }
+        .prose code { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.85em; 
+            background: var(--surface); 
+            padding: 4px 8px; 
+            border-radius: 8px;
+            color: var(--fg);
+        }
+        .prose pre code { background: transparent; padding: 0; }
+        .prose a { color: var(--fg); text-decoration: underline; text-underline-offset: 4px; }
+        .prose p { margin-bottom: 0.75rem; }
+        .prose p:last-child { margin-bottom: 0; }
+        
+        /* Dynamic Typography Classes */
+        .text-size-sm .content-body * { font-size: 13px !important; line-height: 1.6 !important; }
+        .text-size-normal .content-body * { font-size: 15px !important; line-height: 1.625 !important; }
+        .text-size-lg .content-body * { font-size: 17px !important; line-height: 1.7 !important; }
+
+        /* MESSAGE SPACING CLASSES */
+        .spacing-compact .msg-enter, .spacing-compact .msg-enter-user { margin-bottom: 0.75rem !important; }
+        .spacing-normal .msg-enter, .spacing-normal .msg-enter-user { margin-bottom: 1.5rem !important; }
+
+        /* FOCUS MODE */
+        body.focus-mode #chat-container > div:not(:last-child) {
+            opacity: 0.3 !important;
+            filter: grayscale(50%);
+            transition: all 0.4s ease;
+        }
+        body.focus-mode #chat-container > div:not(:last-child):hover {
+            opacity: 1 !important;
+            filter: grayscale(0%);
+        }
+
+        /* ZEN MODE STYLES */
+        body.zen-mode aside { display: none !important; }
+        body.zen-mode header { opacity: 0 !important; pointer-events: none; }
+        body.zen-mode #chat-container { padding-top: 2rem !important; }
+        body.zen-mode #zen-btn-float { display: flex !important; }
+
+        /* Details Tag Animation */
+        details.group summary::-webkit-details-marker { display: none; }
+        details.group[open] summary ~ div { animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .copy-btn { 
+            position: absolute; top: 12px; right: 12px; 
+            background: rgba(255,255,255,0.1); color: var(--fg); 
+            padding: 6px 14px; font-size: 11px; 
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; opacity: 0; transition: all 0.3s;
+            backdrop-filter: blur(4px); 
+        }
+        .prose pre:hover .copy-btn { opacity: 1; }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: var(--border);
+            height: 4px;
+            border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            background: var(--fg);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        input[type="checkbox"] {
+            appearance: none;
+            width: 20px; height: 20px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        input[type="checkbox"]:checked {
+            background: var(--fg);
+            border-color: var(--fg);
+        }
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .settings-panel {
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .settings-panel.open { transform: translateX(0); }
+
+        .msg-img { 
+            filter: grayscale(100%); 
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); 
+            border-radius: 16px;
+        }
+        .msg-img:hover { filter: grayscale(0%); transform: scale(1.02); box-shadow: 0 10px 30px rgba(255,255,255,0.05); }
+        
+        .ai-pulse { animation: softPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes softPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+        }
+    </style>
 </head>
 <body class="h-screen w-screen flex antialiased selection:bg-white/30 selection:text-white text-size-normal font-sans smooth-transition" id="app-body">
 
+    <!-- Lightbox Modal -->
     <div id="lightbox-modal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/95 backdrop-blur-xl smooth-transition opacity-0" onclick="toggleLightbox()">
         <img id="lightbox-img" class="max-w-[90vw] max-h-[90vh] rounded-2xl border border-white/10 object-contain shadow-[0_0_50px_rgba(255,255,255,0.1)] smooth-transition transform scale-95">
         <button class="absolute top-8 right-8 text-white/50 hover:text-white text-3xl smooth-transition bg-white/5 hover:bg-white/10 w-12 h-12 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
+    <!-- Confirm Delete Modal -->
     <div id="delete-modal" class="fixed inset-0 z-[250] hidden items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 smooth-transition">
         <div class="glass-panel p-8 w-full max-w-sm rounded-[24px] shadow-2xl border border-white/10 text-center transform scale-95 smooth-transition" id="delete-modal-content">
             <div class="w-16 h-16 bg-red-500/10 rounded-full mx-auto flex items-center justify-center mb-4 border border-red-500/20">
                 <i class="fa-solid fa-trash-can text-2xl text-red-400"></i>
             </div>
             <h3 class="text-xl font-bold text-white mb-2">Delete Session?</h3>
-            <p class="text-sm text-gray-400 mb-8">This action cannot be undone.</p>
+            <p class="text-sm text-gray-400 mb-8">This action cannot be undone. The session will be permanently removed.</p>
             <div class="flex gap-4">
                 <button onclick="closeDeleteModal()" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-medium smooth-transition">Cancel</button>
                 <button onclick="confirmDeleteSession()" class="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold smooth-transition shadow-[0_0_15px_rgba(239,68,68,0.3)]">Delete</button>
@@ -36,6 +207,7 @@
         </div>
     </div>
 
+    <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-2xl">
         <div class="glass-panel p-12 w-full max-w-md rounded-[2rem] shadow-2xl msg-enter">
             <div class="w-20 h-20 bg-white/10 rounded-3xl mx-auto flex items-center justify-center mb-8 border border-white/10 shadow-inner">
@@ -47,13 +219,14 @@
                 <div>
                     <input type="text" id="username" required class="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-white outline-none smooth-transition text-sm" placeholder="Enter your identifier...">
                 </div>
-                <button type="submit" class="w-full bg-white text-black hover:bg-gray-200 py-4 rounded-2xl text-sm font-bold tracking-wide smooth-transition shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                <button type="submit" class="w-full bg-white text-black hover:bg-gray-200 py-4 rounded-2xl text-sm font-bold tracking-wide smooth-transition shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]">
                     Initialize Workspace
                 </button>
             </form>
         </div>
     </div>
 
+    <!-- Sidebar -->
     <aside class="w-[300px] border-r border-white/5 flex-shrink-0 flex flex-col hidden md:flex bg-[#030303] z-20 smooth-transition">
         <div class="h-20 border-b border-white/5 flex items-center justify-between px-8">
             <div class="flex items-center gap-3">
@@ -112,66 +285,144 @@
         </div>
     </aside>
 
+    <!-- Main Container -->
     <main class="flex-1 flex flex-col relative bg-transparent smooth-transition">
+        
+        <!-- Header -->
         <header class="absolute top-0 inset-x-0 h-20 flex items-center justify-between px-6 md:px-10 z-30 bg-gradient-to-b from-[#050505] to-transparent pointer-events-none smooth-transition">
             <div class="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-white/5">
                 <div class="w-2 h-2 rounded-full bg-white/50" id="ai-status-dot"></div>
                 <span class="text-[11px] font-medium tracking-wide text-gray-400 uppercase" id="ai-status-text">System Idle</span>
             </div>
             <div class="flex items-center gap-3 pointer-events-auto">
-                <button onclick="toggleZenMode()" class="h-10 w-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center justify-center"><i class="fa-solid fa-expand"></i></button>
-                <button onclick="summarizeThread()" class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2 hidden md:flex"><i class="fa-solid fa-bolt"></i> TL;DR</button>
+                <button onclick="toggleZenMode()" class="h-10 w-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center justify-center" title="Toggle Zen Mode">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <button onclick="summarizeThread()" class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2 hidden md:flex" title="Summarize entire thread">
+                    <i class="fa-solid fa-bolt"></i> TL;DR
+                </button>
+                <button onclick="startNewChat()" class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2 hidden md:flex">
+                    <i class="fa-solid fa-eraser"></i> Clear
+                </button>
+                
                 <div class="relative group">
                     <button class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2">
                         <i class="fa-solid fa-download"></i> Export <i class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
                     </button>
                     <div class="absolute right-0 mt-2 w-32 glass-panel border border-white/10 rounded-2xl overflow-hidden opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto smooth-transition shadow-2xl">
-                        <button onclick="exportMarkdown()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2"><i class="fa-brands fa-markdown"></i> .MD</button>
-                        <button onclick="exportChat()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2 border-t border-white/5"><i class="fa-solid fa-code"></i> .JSON</button>
+                        <button onclick="exportMarkdown()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2"><i class="fa-brands fa-markdown text-gray-400"></i> .MD (Text)</button>
+                        <button onclick="exportChat()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2 border-t border-white/5"><i class="fa-solid fa-code text-gray-400"></i> .JSON (Data)</button>
                     </div>
                 </div>
+
+                <button class="md:hidden w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white flex items-center justify-center smooth-transition" onclick="toggleSettings()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
             </div>
         </header>
 
-        <div id="chat-container" class="flex-1 overflow-y-auto px-4 md:px-24 pt-28 pb-48 scroll-smooth flex flex-col gap-8 relative">
-            </div>
+        <button id="zen-btn-float" onclick="toggleZenMode()" class="fixed top-6 right-6 z-50 w-12 h-12 rounded-full glass-panel border border-white/20 text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)] items-center justify-center smooth-transition hover:bg-white/10 hidden">
+            <i class="fa-solid fa-compress"></i>
+        </button>
 
+        <!-- Messages Area -->
+        <div id="chat-container" class="flex-1 overflow-y-auto px-4 md:px-24 pt-28 pb-48 scroll-smooth flex flex-col gap-8 relative">
+            <!-- Messages injected here -->
+        </div>
+
+        <div class="absolute bottom-40 right-10 z-40">
+            <button id="btn-scroll-down" onclick="scrollToBottom(true)" class="opacity-0 translate-y-4 pointer-events-none w-12 h-12 rounded-full glass-panel border border-white/20 text-white shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center justify-center smooth-transition hover:bg-white/10">
+                <i class="fa-solid fa-arrow-down"></i>
+            </button>
+        </div>
+
+        <!-- Stop Generation Button -->
+        <div class="absolute bottom-32 left-0 right-0 flex justify-center z-20 pointer-events-none">
+            <button id="btn-stop" onclick="stopGeneration()" class="hidden pointer-events-auto bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 text-white px-6 py-3 rounded-full text-xs font-bold tracking-wide smooth-transition shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-2">
+                <i class="fa-solid fa-stop text-white/50"></i> Stop Generating
+            </button>
+        </div>
+
+        <!-- Input Section -->
         <div class="absolute bottom-6 inset-x-6 md:inset-x-24 z-30">
             <div class="max-w-4xl mx-auto relative">
+                
                 <div id="attachment-preview" class="hidden mb-4 p-2 pl-3 glass-panel rounded-2xl flex items-center gap-4 w-fit shadow-lg msg-enter">
                     <div id="preview-thumb" class="w-10 h-10 bg-black/50 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden"></div>
                     <span id="preview-name" class="text-xs font-medium text-gray-300 max-w-[200px] truncate"></span>
                     <button onclick="clearAttachment()" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 smooth-transition"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
-                <div class="glass-panel p-2 rounded-[2rem] flex items-end gap-2 shadow-[0_20px_40px_rgba(0,0,0,0.4)] border border-white/10 relative">
+                <div class="glass-panel p-2 rounded-[2rem] flex items-end gap-2 shadow-[0_20px_40px_rgba(0,0,0,0.4)] focus-within:border-white/30 focus-within:shadow-[0_0_30px_rgba(255,255,255,0.05)] smooth-transition border border-white/10 relative">
                     <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
-                    <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition"><i class="fa-solid fa-paperclip text-lg"></i></button>
                     
+                    <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition" title="Attach Image">
+                        <i class="fa-solid fa-paperclip text-lg"></i>
+                    </button>
+
+                    <!-- Advanced Tools Dropdown -->
                     <div class="relative" id="tools-dropdown-container">
-                        <button id="btn-tools" onclick="toggleToolsMenu(event)" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition relative">
+                        <button id="btn-tools" onclick="toggleToolsMenu(event)" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition relative" title="Advanced Tools">
                             <i class="fa-solid fa-layer-group text-lg"></i>
                             <div id="tools-active-dot" class="absolute top-2 right-2 w-2 h-2 rounded-full hidden"></div>
                         </button>
+
+                        <!-- Dynamically floating above the chat input bar -->
                         <div id="tools-menu" class="absolute bottom-[calc(100%+16px)] left-0 w-56 glass-panel border border-white/10 rounded-2xl overflow-hidden opacity-0 pointer-events-none smooth-transition shadow-2xl flex flex-col z-50 transform translate-y-2">
                             <button onclick="toggleTool('webSearch', event)" id="tool-websearch" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
-                                <span class="flex items-center gap-2"><i class="fa-solid fa-globe text-blue-400"></i> Web Search</span>
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-globe text-blue-400 w-4 text-center"></i> Web Search</span>
                                 <i class="fa-solid fa-circle-check text-blue-400 opacity-0 tool-check smooth-transition scale-75"></i>
                             </button>
                             <button onclick="toggleTool('deepThink', event)" id="tool-deepthink" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
-                                <span class="flex items-center gap-2"><i class="fa-solid fa-brain text-purple-400"></i> Deep Think</span>
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-brain text-purple-400 w-4 text-center"></i> Deep Think</span>
                                 <i class="fa-solid fa-circle-check text-purple-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('deepSearch', event)" id="tool-deepsearch" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-satellite-dish text-emerald-400 w-4 text-center"></i> Deep Search</span>
+                                <i class="fa-solid fa-circle-check text-emerald-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('factCheck', event)" id="tool-factcheck" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-amber-400 w-4 text-center"></i> Fact Checker</span>
+                                <i class="fa-solid fa-circle-check text-amber-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('codeArchitect', event)" id="tool-codearchitect" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-laptop-code text-cyan-400 w-4 text-center"></i> Code Architect</span>
+                                <i class="fa-solid fa-circle-check text-cyan-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('eli5', event)" id="tool-eli5" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-child-reaching text-pink-400 w-4 text-center"></i> ELI5 Mode</span>
+                                <i class="fa-solid fa-circle-check text-pink-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('dataAnalyst', event)" id="tool-dataanalyst" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-chart-pie text-fuchsia-400 w-4 text-center"></i> Data Analyst</span>
+                                <i class="fa-solid fa-circle-check text-fuchsia-400 opacity-0 tool-check smooth-transition scale-75"></i>
                             </button>
                         </div>
                     </div>
+                    
+                    <button id="btn-mic" onclick="toggleDictation()" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition" title="Voice Dictation">
+                        <i class="fa-solid fa-microphone text-lg"></i>
+                    </button>
 
                     <textarea id="chat-input" rows="1" class="flex-1 bg-transparent border-none outline-none py-4 px-2 text-[15px] resize-none text-white no-scrollbar max-h-40 placeholder-gray-600 relative z-10" placeholder="Message ZXNV..."></textarea>
-                    <button id="btn-enhance" onclick="enhancePrompt()" class="w-10 h-10 mr-1 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 smooth-transition"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
-                    <button id="btn-send" onclick="sendMessage()" class="w-12 h-12 flex-shrink-0 bg-white text-black hover:bg-gray-200 hover:scale-105 active:scale-95 rounded-full flex items-center justify-center smooth-transition disabled:opacity-50 shadow-[0_0_15px_rgba(255,255,255,0.2)] relative z-10"><i class="fa-solid fa-arrow-up text-lg"></i></button>
+                    
+                    <!-- Prompt Enhancer Magic Wand (NEW) -->
+                    <button id="btn-enhance" onclick="enhancePrompt()" class="w-10 h-10 mr-1 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 smooth-transition" title="Enhance Prompt via AI">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+
+                    <button id="btn-send" onclick="sendMessage()" class="w-12 h-12 flex-shrink-0 bg-white text-black hover:bg-gray-200 hover:scale-105 active:scale-95 rounded-full flex items-center justify-center smooth-transition disabled:opacity-50 shadow-[0_0_15px_rgba(255,255,255,0.2)] relative z-10">
+                        <i class="fa-solid fa-arrow-up text-lg"></i>
+                    </button>
+
+                    <div class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-gray-600 font-mono tracking-widest uppercase pointer-events-none opacity-0 smooth-transition" id="input-stats">
+                        0 chars
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Settings Slide-out -->
         <div id="settings-panel" class="settings-panel fixed top-0 right-0 h-full w-full md:w-[400px] glass-panel border-l border-white/10 z-50 p-8 shadow-2xl overflow-y-auto pb-24">
             <div class="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
                 <h3 class="text-xl font-bold tracking-tight">Preferences</h3>
@@ -179,25 +430,1542 @@
             </div>
             
             <div class="space-y-8">
+                <!-- Interface -->
                 <div class="space-y-4">
-                    <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">Interface</label>
+                    <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-widest pl-1">Interface Experience</label>
                     <div class="glass-panel p-4 rounded-3xl space-y-4 border border-white/5">
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium">Haptic Audio</span>
                             <input type="checkbox" id="setting-sound" checked>
                         </div>
+                        <div class="h-[1px] bg-white/5"></div>
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium">Auto-Focus Scroll</span>
                             <input type="checkbox" id="setting-scroll" checked>
                         </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Auto-Expand Reasoning</span>
+                            <input type="checkbox" id="setting-autoexpandthink">
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium" title="Dims older messages to reduce clutter">Focus Mode</span>
+                            <input type="checkbox" id="setting-focusmode">
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium" title="Reads incoming messages out loud automatically">Auto-TTS Response</span>
+                            <input type="checkbox" id="setting-autotts">
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <!-- NEW SETTING: Auto Title Generation -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium" title="AI will generate smart titles for saved threads">Smart Auto-Titling</span>
+                            <input type="checkbox" id="setting-autotitle" checked>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Typography Scale</span>
+                            <select id="setting-textsize" class="bg-black/40 border border-white/10 p-2 rounded-xl text-xs text-white outline-none cursor-pointer text-right">
+                                <option value="text-size-sm">Compact</option>
+                                <option value="text-size-normal">Normal</option>
+                                <option value="text-size-lg">Large</option>
+                            </select>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <!-- NEW SETTING: Message Spacing -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Message Spacing</span>
+                            <select id="setting-msgspacing" class="bg-black/40 border border-white/10 p-2 rounded-xl text-xs text-white outline-none cursor-pointer text-right">
+                                <option value="spacing-normal">Comfortable</option>
+                                <option value="spacing-compact">Compact</option>
+                            </select>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <!-- NEW SETTING: BG Pattern -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Chat Background</span>
+                            <select id="setting-bgpattern" class="bg-black/40 border border-white/10 p-2 rounded-xl text-xs text-white outline-none cursor-pointer text-right">
+                                <option value="bg-pattern-radial">Radial Glow</option>
+                                <option value="bg-pattern-grid">Hacker Grid</option>
+                                <option value="bg-pattern-dots">Minimal Dots</option>
+                            </select>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Send Behavior</span>
+                            <select id="setting-sendkey" class="bg-black/40 border border-white/10 p-2 rounded-xl text-xs text-white outline-none cursor-pointer text-right">
+                                <option value="enter">Enter to Send</option>
+                                <option value="shift-enter">Shift+Enter to Send</option>
+                            </select>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">UI Font Family</span>
+                            <select id="setting-uifont" class="bg-black/40 border border-white/10 p-2 rounded-xl text-xs text-white outline-none cursor-pointer text-right">
+                                <option value="font-sans">Inter (Default)</option>
+                                <option value="font-serif">Serif (Elegant)</option>
+                                <option value="font-mono">Mono (Hacker)</option>
+                                <option value="font-lexend">Lexend (Highly Readable)</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
+
+                <!-- AI Parameters -->
+                <div class="space-y-4">
+                    <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-widest pl-1">AI Parameters</label>
+                    
+                    <div class="glass-panel p-4 rounded-2xl border border-white/5 space-y-3 mb-3">
+                        <!-- NEW SETTING: Live Time Context -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-purple-300"><i class="fa-regular fa-clock"></i> Live Time Context</span>
+                            <input type="checkbox" id="setting-timecontext" checked>
+                        </div>
+                        <p class="text-[10px] text-gray-500 leading-tight">Injects the exact current date & time into the AI's memory invisibly so it can answer temporal questions.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <select id="setting-persona" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium">
+                                <option value="default">Standard Assistant</option>
+                                <option value="coder">Systems Engineer (Code)</option>
+                                <option value="creative">Creative Protocol</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+                        
+                        <div class="relative">
+                            <select id="setting-tone" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium">
+                                <option value="default">Response Tone: Default</option>
+                                <option value="concise">Response Tone: Ultra Concise</option>
+                                <option value="elaborate">Response Tone: Highly Elaborate</option>
+                                <option value="socratic">Response Tone: Socratic (Ask questions)</option>
+                            </select>
+                            <i class="fa-solid fa-comment-dots absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+
+                        <!-- NEW SETTING: Verbosity limits -->
+                        <div class="relative">
+                            <select id="setting-verbosity" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium">
+                                <option value="auto">Response Length: Auto</option>
+                                <option value="short">Response Length: Brief/Short</option>
+                                <option value="long">Response Length: Exhaustive</option>
+                            </select>
+                            <i class="fa-solid fa-ruler absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+
+                        <div class="relative">
+                            <select id="setting-codetheme" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium">
+                                <option value="github-dark">Code Theme: GitHub Dark</option>
+                                <option value="dracula">Code Theme: Dracula</option>
+                                <option value="atom-one-dark">Code Theme: Atom One Dark</option>
+                            </select>
+                            <i class="fa-solid fa-code absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+
+                        <div class="relative">
+                            <select id="setting-language" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium">
+                                <option value="English">English</option>
+                                <option value="Indonesian">Indonesian</option>
+                                <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+                                <option value="Chinese (Traditional)">Chinese (Traditional)</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="French">French</option>
+                                <option value="German">German</option>
+                                <option value="Japanese">Japanese</option>
+                                <option value="Korean">Korean</option>
+                                <option value="Russian">Russian</option>
+                                <option value="Arabic">Arabic</option>
+                                <option value="Portuguese">Portuguese</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Bengali">Bengali</option>
+                                <option value="Urdu">Urdu</option>
+                                <option value="Turkish">Turkish</option>
+                                <option value="Italian">Italian</option>
+                                <option value="Vietnamese">Vietnamese</option>
+                                <option value="Thai">Thai</option>
+                                <option value="Dutch">Dutch</option>
+                                <option value="Polish">Polish</option>
+                                <option value="Swedish">Swedish</option>
+                                <option value="Greek">Greek</option>
+                                <option value="Czech">Czech</option>
+                                <option value="Danish">Danish</option>
+                                <option value="Finnish">Finnish</option>
+                                <option value="Hungarian">Hungarian</option>
+                                <option value="Norwegian">Norwegian</option>
+                                <option value="Slovak">Slovak</option>
+                                <option value="Ukrainian">Ukrainian</option>
+                                <option value="Malay">Malay</option>
+                                <option value="Tagalog">Tagalog</option>
+                                <option value="Swahili">Swahili</option>
+                                <option value="Hebrew">Hebrew</option>
+                                <option value="Persian">Persian (Farsi)</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Javanese">Javanese</option>
+                                <option value="Zulu">Zulu</option>
+                            </select>
+                            <i class="fa-solid fa-earth-americas absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+                        
+                        <div class="relative">
+                            <select id="setting-memory" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 cursor-pointer appearance-none smooth-transition font-medium" title="How much of the conversation the AI remembers">
+                                <option value="all">Context Memory: Infinite</option>
+                                <option value="10">Context Memory: Last 10 msgs</option>
+                                <option value="4">Context Memory: Last 4 msgs</option>
+                            </select>
+                            <i class="fa-solid fa-brain absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-white/5 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium">Creativity (Temp)</span>
+                                <span id="creativity-val" class="text-xs text-white font-mono">0.7</span>
+                            </div>
+                            <input type="range" id="setting-creativity" min="0" max="1" step="0.1" value="0.7" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-widest pl-1">Custom Instructions</label>
+                    <textarea id="setting-custom" rows="3" class="w-full glass-panel border border-white/10 p-4 rounded-2xl text-sm text-white outline-none focus:border-white/30 resize-none smooth-transition placeholder-gray-600" placeholder="E.g., Keep answers brief, call me Boss..."></textarea>
+                </div>
+
+                <!-- Danger Zone / Data Backup -->
+                <div class="pt-6 border-t border-white/5 space-y-3">
+                    <button onclick="window.exportAllData()" class="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 text-sm font-bold smooth-transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-box-archive"></i> Export Full Backup (.JSON)
+                    </button>
+                    <button onclick="window.nukeData()" class="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-sm font-bold smooth-transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-skull"></i> Wipe All Data
+                    </button>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Toasts -->
     <div id="toast-container" class="fixed bottom-32 right-6 z-[200] flex flex-col gap-3 pointer-events-none"></div>
 
-    <script type="module" src="script.js"></script>
+    <!-- Firebase SDK Imports & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const apiKey = ""; 
+        const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+
+        let state = {
+            user: { name: 'Guest', plan: 'ultra', messages: 0 },
+            history: [],
+            threads: [],
+            currentSessionId: Date.now().toString(),
+            isGenerating: false,
+            webSearchEnabled: false,
+            deepThinkEnabled: false,
+            deepSearchEnabled: false,
+            factCheckEnabled: false,
+            codeArchitectEnabled: false,
+            eli5Enabled: false, // NEW
+            dataAnalystEnabled: false, // NEW
+            attachment: null,
+            settings: { 
+                sound: true, scroll: true, persona: 'default', language: 'English',
+                creativity: 0.7, customInstructions: '', textSize: 'text-size-normal', memory: 'all',
+                sendBehavior: 'enter', codeTheme: 'github-dark', autoExpandThink: false,
+                uiFont: 'font-sans', tone: 'default', autoTitle: true, timeContext: true, verbosity: 'auto',
+                focusMode: false, autoTTS: false, bgPattern: 'bg-pattern-radial', msgSpacing: 'spacing-normal' // NEW
+            }
+        };
+
+        let db, auth, currentUser;
+        let currentAbortController = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'zxnv-default-id';
+
+        const sfx = {
+            send: new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'),
+            receive: new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
+        };
+        const playSfx = (type) => { if(state.settings.sound) sfx[type].play().catch(()=>{}); };
+
+        async function init() {
+            const savedSettings = localStorage.getItem('zxnv_settings');
+            if(savedSettings) state.settings = { ...state.settings, ...JSON.parse(savedSettings) };
+            syncSettingsUI();
+
+            if (typeof __firebase_config !== 'undefined') {
+                const app = initializeApp(JSON.parse(__firebase_config));
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, async (user) => {
+                    currentUser = user;
+                    if(user) await loadFromCloud();
+                });
+            } else {
+                const saved = localStorage.getItem('zxnv_state');
+                if(saved) {
+                    const parsed = JSON.parse(saved);
+                    state.user = parsed.user || state.user;
+                    state.threads = parsed.threads || [];
+                    state.currentSessionId = parsed.currentSessionId || Date.now().toString();
+                    
+                    const currentThread = state.threads.find(t => t.id === state.currentSessionId);
+                    state.history = currentThread ? currentThread.history : [];
+                }
+                updateUI();
+                renderHistory();
+                renderSidebarThreads();
+            }
+
+            if(!state.user.loggedIn) {
+                document.getElementById('auth-modal').classList.remove('hidden');
+            } else {
+                document.getElementById('auth-modal').classList.add('hidden');
+                updateUI();
+            }
+
+            document.getElementById('setting-creativity').addEventListener('input', function() {
+                document.getElementById('creativity-val').textContent = parseFloat(this.value).toFixed(1);
+            });
+
+            const tx = document.getElementById('chat-input');
+            const statsDiv = document.getElementById('input-stats');
+            tx.addEventListener("input", function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight > 160 ? 160 : this.scrollHeight) + 'px';
+                
+                const chars = this.value.length;
+                if (chars > 0) {
+                    statsDiv.classList.remove('opacity-0');
+                    statsDiv.textContent = `${chars} chars`;
+                } else {
+                    statsDiv.classList.add('opacity-0');
+                }
+            });
+
+            tx.addEventListener('keydown', function(e) {
+                const sendOnEnter = state.settings.sendBehavior !== 'shift-enter';
+                if (e.key === 'Enter') {
+                    if (sendOnEnter && !e.shiftKey) {
+                        e.preventDefault();
+                        if(!state.isGenerating) sendMessage();
+                    } else if (!sendOnEnter && e.shiftKey) {
+                        e.preventDefault();
+                        if(!state.isGenerating) sendMessage();
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('tools-menu');
+                const container = document.getElementById('tools-dropdown-container');
+                if (menu && container && !container.contains(e.target)) {
+                    menu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+                }
+            });
+
+            const chatBox = document.getElementById('chat-container');
+            const scrollBtn = document.getElementById('btn-scroll-down');
+            chatBox.addEventListener('scroll', () => {
+                const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 150;
+                if (!isNearBottom && chatBox.scrollHeight > chatBox.clientHeight * 2) {
+                    scrollBtn.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+                } else {
+                    scrollBtn.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                }
+            });
+        }
+
+        async function loadFromCloud() {
+            if (!currentUser || !db) return;
+            try {
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profile');
+                const pSnap = await getDoc(profileRef);
+                if(pSnap.exists() && pSnap.data().user) state.user = pSnap.data().user;
+
+                const threadsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'threads');
+                const snapshot = await getDocs(threadsRef);
+                state.threads = [];
+                
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let parsedHistory = [];
+                    try { parsedHistory = typeof data.history === 'string' ? JSON.parse(data.history) : data.history; } catch(e){}
+                    state.threads.push({
+                        id: docSnap.id,
+                        title: data.title || 'Untitled Thread',
+                        history: parsedHistory || [],
+                        timestamp: data.timestamp || parseInt(docSnap.id)
+                    });
+                });
+
+                state.threads.sort((a, b) => b.timestamp - a.timestamp);
+
+                if(state.threads.length > 0) {
+                    state.currentSessionId = state.threads[0].id;
+                    state.history = state.threads[0].history;
+                } else {
+                    state.currentSessionId = Date.now().toString();
+                    state.history = [];
+                }
+
+                updateUI();
+                renderHistory();
+                renderSidebarThreads();
+            } catch (e) { console.warn("Cloud load failed", e); }
+        }
+
+        async function save() {
+            localStorage.setItem('zxnv_settings', JSON.stringify(state.settings));
+            
+            let title = 'New Thread';
+            const existingIdx = state.threads.findIndex(t => t.id === state.currentSessionId);
+            
+            // Respect existing title if it's already set (perhaps via auto-title)
+            if(existingIdx >= 0 && state.threads[existingIdx].title && state.threads[existingIdx].title !== 'New Thread') {
+                title = state.threads[existingIdx].title;
+            } else if(state.history.length > 0) {
+                // Fallback quick title
+                const firstUserMsg = state.history.find(m => m.role === 'user');
+                if(firstUserMsg) {
+                    let cleanText = firstUserMsg.rawText || firstUserMsg.content.replace(/<[^>]*>?/gm, '');
+                    title = cleanText.substring(0, 30) + (cleanText.length > 30 ? '...' : '');
+                }
+            }
+
+            const threadData = {
+                id: state.currentSessionId,
+                title: title,
+                history: state.history,
+                timestamp: parseInt(state.currentSessionId)
+            };
+            
+            if(existingIdx >= 0) state.threads[existingIdx] = threadData;
+            else state.threads.unshift(threadData);
+
+            renderSidebarThreads();
+            localStorage.setItem('zxnv_state', JSON.stringify({ user: state.user, threads: state.threads, currentSessionId: state.currentSessionId }));
+            updateSessionStats();
+
+            if(currentUser && db) {
+                try {
+                    const icon = document.getElementById('cloud-sync-icon');
+                    icon.classList.add('bg-white/50');
+                    icon.classList.remove('bg-white');
+                    
+                    const safeHistory = state.history.map(m => {
+                        let safeContent = m.content || '';
+                        if (safeContent.includes('<img src="data:image')) {
+                            safeContent = '<div class="p-3 bg-white/5 rounded-xl text-white/50 text-xs inline-flex items-center gap-2 border border-white/5"><i class="fa-solid fa-image"></i> Image rendered</div>';
+                        }
+                        if (safeContent.length > 50000) safeContent = safeContent.substring(0, 50000) + '... [Truncated]';
+                        return { id: m.id || crypto.randomUUID(), role: m.role || 'user', content: safeContent, rawText: m.rawText || '', htmlAppend: m.htmlAppend || '' };
+                    });
+
+                    await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'threads', state.currentSessionId), { 
+                        title: title, history: JSON.stringify(safeHistory), timestamp: parseInt(state.currentSessionId)
+                    });
+                    await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profile'), { user: state.user });
+                    
+                    setTimeout(() => {
+                        icon.classList.add('bg-white');
+                        icon.classList.remove('bg-white/50');
+                    }, 1000);
+                } catch(e) { console.error("Cloud save error", e); }
+            }
+        }
+
+        // --- UI Logic --- //
+        function updateUI() {
+            document.getElementById('user-display-name').textContent = state.user.name;
+            updateSessionStats();
+        }
+
+        function syncSettingsUI() {
+            document.getElementById('setting-sound').checked = state.settings.sound;
+            document.getElementById('setting-scroll').checked = state.settings.scroll;
+            document.getElementById('setting-autoexpandthink').checked = state.settings.autoExpandThink; 
+            
+            if(document.getElementById('setting-autotitle')) document.getElementById('setting-autotitle').checked = state.settings.autoTitle !== false;
+            if(document.getElementById('setting-timecontext')) document.getElementById('setting-timecontext').checked = state.settings.timeContext !== false;
+            if(document.getElementById('setting-focusmode')) document.getElementById('setting-focusmode').checked = state.settings.focusMode === true;
+            if(document.getElementById('setting-autotts')) document.getElementById('setting-autotts').checked = state.settings.autoTTS === true;
+            
+            document.getElementById('setting-creativity').value = state.settings.creativity;
+            document.getElementById('creativity-val').textContent = parseFloat(state.settings.creativity).toFixed(1);
+            document.getElementById('setting-custom').value = state.settings.customInstructions || '';
+            
+            if(document.getElementById('setting-persona')) document.getElementById('setting-persona').value = state.settings.persona || 'default';
+            if(document.getElementById('setting-language')) document.getElementById('setting-language').value = state.settings.language || 'English';
+            if(document.getElementById('setting-textsize')) document.getElementById('setting-textsize').value = state.settings.textSize || 'text-size-normal';
+            if(document.getElementById('setting-memory')) document.getElementById('setting-memory').value = state.settings.memory || 'all';
+            if(document.getElementById('setting-sendkey')) document.getElementById('setting-sendkey').value = state.settings.sendBehavior || 'enter';
+            if(document.getElementById('setting-codetheme')) document.getElementById('setting-codetheme').value = state.settings.codeTheme || 'github-dark';
+            if(document.getElementById('setting-uifont')) document.getElementById('setting-uifont').value = state.settings.uiFont || 'font-sans';
+            if(document.getElementById('setting-tone')) document.getElementById('setting-tone').value = state.settings.tone || 'default';
+            if(document.getElementById('setting-verbosity')) document.getElementById('setting-verbosity').value = state.settings.verbosity || 'auto';
+            if(document.getElementById('setting-bgpattern')) document.getElementById('setting-bgpattern').value = state.settings.bgPattern || 'bg-pattern-radial';
+            if(document.getElementById('setting-msgspacing')) document.getElementById('setting-msgspacing').value = state.settings.msgSpacing || 'spacing-normal';
+
+            document.getElementById('app-body').className = `h-screen w-screen flex antialiased selection:bg-white/30 selection:text-white ${state.settings.textSize || 'text-size-normal'} ${state.settings.uiFont || 'font-sans'} ${state.settings.focusMode ? 'focus-mode' : ''} ${state.settings.bgPattern || 'bg-pattern-radial'} ${state.settings.msgSpacing || 'spacing-normal'} smooth-transition`;
+            updateCodeTheme();
+            updateToolsUI();
+        }
+
+        function applySettings() {
+            state.settings.sound = document.getElementById('setting-sound').checked;
+            state.settings.scroll = document.getElementById('setting-scroll').checked;
+            state.settings.autoExpandThink = document.getElementById('setting-autoexpandthink').checked; 
+            
+            if(document.getElementById('setting-autotitle')) state.settings.autoTitle = document.getElementById('setting-autotitle').checked;
+            if(document.getElementById('setting-timecontext')) state.settings.timeContext = document.getElementById('setting-timecontext').checked;
+            if(document.getElementById('setting-focusmode')) state.settings.focusMode = document.getElementById('setting-focusmode').checked;
+            if(document.getElementById('setting-autotts')) state.settings.autoTTS = document.getElementById('setting-autotts').checked;
+
+            state.settings.creativity = parseFloat(document.getElementById('setting-creativity').value);
+            state.settings.customInstructions = document.getElementById('setting-custom').value;
+            
+            if(document.getElementById('setting-persona')) state.settings.persona = document.getElementById('setting-persona').value;
+            if(document.getElementById('setting-language')) state.settings.language = document.getElementById('setting-language').value;
+            if(document.getElementById('setting-textsize')) state.settings.textSize = document.getElementById('setting-textsize').value;
+            if(document.getElementById('setting-memory')) state.settings.memory = document.getElementById('setting-memory').value;
+            if(document.getElementById('setting-sendkey')) state.settings.sendBehavior = document.getElementById('setting-sendkey').value;
+            if(document.getElementById('setting-codetheme')) state.settings.codeTheme = document.getElementById('setting-codetheme').value;
+            if(document.getElementById('setting-uifont')) state.settings.uiFont = document.getElementById('setting-uifont').value;
+            if(document.getElementById('setting-tone')) state.settings.tone = document.getElementById('setting-tone').value;
+            if(document.getElementById('setting-verbosity')) state.settings.verbosity = document.getElementById('setting-verbosity').value;
+            if(document.getElementById('setting-bgpattern')) state.settings.bgPattern = document.getElementById('setting-bgpattern').value;
+            if(document.getElementById('setting-msgspacing')) state.settings.msgSpacing = document.getElementById('setting-msgspacing').value;
+            
+            syncSettingsUI();
+            save();
+            showToast("Settings Saved");
+        }
+
+        function updateCodeTheme() {
+            const themeMap = {
+                'github-dark': 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css',
+                'dracula': 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/dracula.min.css',
+                'atom-one-dark': 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css'
+            };
+            document.getElementById('highlight-theme').href = themeMap[state.settings.codeTheme || 'github-dark'];
+        }
+
+        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('open'); }
+        
+        window.toggleZenMode = () => {
+            document.body.classList.toggle('zen-mode');
+            if (state.settings.scroll) scrollToBottom(true);
+        };
+
+        window.toggleToolsMenu = (e) => {
+            if(e) e.stopPropagation();
+            const menu = document.getElementById('tools-menu');
+            if (menu.classList.contains('opacity-0')) {
+                menu.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            } else {
+                menu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            }
+        };
+
+        window.toggleTool = (toolName, e) => {
+            if(e) e.stopPropagation();
+            if (toolName === 'deepSearch') {
+                state.deepSearchEnabled = !state.deepSearchEnabled;
+                if (state.deepSearchEnabled) {
+                    state.webSearchEnabled = false;
+                    state.deepThinkEnabled = false;
+                }
+            } else if (toolName === 'codeArchitect') {
+                state.codeArchitectEnabled = !state.codeArchitectEnabled;
+            } else if (toolName === 'factCheck') {
+                state.factCheckEnabled = !state.factCheckEnabled;
+            } else if (toolName === 'eli5') {
+                state.eli5Enabled = !state.eli5Enabled;
+            } else if (toolName === 'dataAnalyst') {
+                state.dataAnalystEnabled = !state.dataAnalystEnabled;
+            } else {
+                if (toolName === 'webSearch') state.webSearchEnabled = !state.webSearchEnabled;
+                if (toolName === 'deepThink') state.deepThinkEnabled = !state.deepThinkEnabled;
+                if (state.webSearchEnabled || state.deepThinkEnabled) {
+                    state.deepSearchEnabled = false;
+                }
+            }
+            updateToolsUI();
+            const names = { webSearch: 'Web Search', deepThink: 'Deep Think', deepSearch: 'Deep Search', codeArchitect: 'Code Architect', factCheck: 'Fact Checker', eli5: 'ELI5 Mode', dataAnalyst: 'Data Analyst' };
+            const isActive = state[`${toolName}Enabled`];
+            showToast(`${names[toolName]} ${isActive ? 'Enabled' : 'Disabled'}`);
+        };
+
+        window.updateToolsUI = () => {
+            const getIcon = (id) => document.querySelector(`${id} .tool-check`);
+            if(getIcon('#tool-websearch')) {
+                getIcon('#tool-websearch').classList.toggle('opacity-0', !state.webSearchEnabled);
+                getIcon('#tool-websearch').classList.toggle('scale-100', state.webSearchEnabled);
+            }
+            if(getIcon('#tool-deepthink')) {
+                getIcon('#tool-deepthink').classList.toggle('opacity-0', !state.deepThinkEnabled);
+                getIcon('#tool-deepthink').classList.toggle('scale-100', state.deepThinkEnabled);
+            }
+            if(getIcon('#tool-deepsearch')) {
+                getIcon('#tool-deepsearch').classList.toggle('opacity-0', !state.deepSearchEnabled);
+                getIcon('#tool-deepsearch').classList.toggle('scale-100', state.deepSearchEnabled);
+            }
+            if(getIcon('#tool-factcheck')) {
+                getIcon('#tool-factcheck').classList.toggle('opacity-0', !state.factCheckEnabled);
+                getIcon('#tool-factcheck').classList.toggle('scale-100', state.factCheckEnabled);
+            }
+            if(getIcon('#tool-codearchitect')) {
+                getIcon('#tool-codearchitect').classList.toggle('opacity-0', !state.codeArchitectEnabled);
+                getIcon('#tool-codearchitect').classList.toggle('scale-100', state.codeArchitectEnabled);
+            }
+            if(getIcon('#tool-eli5')) {
+                getIcon('#tool-eli5').classList.toggle('opacity-0', !state.eli5Enabled);
+                getIcon('#tool-eli5').classList.toggle('scale-100', state.eli5Enabled);
+            }
+            if(getIcon('#tool-dataanalyst')) {
+                getIcon('#tool-dataanalyst').classList.toggle('opacity-0', !state.dataAnalystEnabled);
+                getIcon('#tool-dataanalyst').classList.toggle('scale-100', state.dataAnalystEnabled);
+            }
+
+            const anyActive = state.webSearchEnabled || state.deepThinkEnabled || state.deepSearchEnabled || state.factCheckEnabled || state.codeArchitectEnabled || state.eli5Enabled || state.dataAnalystEnabled;
+            const dot = document.getElementById('tools-active-dot');
+            if(dot) {
+                if(anyActive) {
+                    dot.classList.remove('hidden');
+                    let color = 'bg-white';
+                    if (state.dataAnalystEnabled) color = 'bg-fuchsia-500 shadow-[0_0_8px_rgba(217,70,239,0.8)]';
+                    else if (state.eli5Enabled) color = 'bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)]';
+                    else if (state.codeArchitectEnabled) color = 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]';
+                    else if (state.factCheckEnabled) color = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]';
+                    else if (state.deepSearchEnabled) color = 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]';
+                    else if (state.deepThinkEnabled && state.webSearchEnabled) color = 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]';
+                    else if (state.deepThinkEnabled) color = 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]';
+                    else if (state.webSearchEnabled) color = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                    dot.className = `absolute top-2 right-2 w-2 h-2 rounded-full ${color}`;
+                } else {
+                    dot.classList.add('hidden');
+                }
+            }
+        };
+        
+        window.openLightbox = (src) => {
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                img.classList.remove('scale-95');
+                img.classList.add('scale-100');
+            }, 10);
+        };
+        
+        window.toggleLightbox = () => {
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-img');
+            modal.classList.add('opacity-0');
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                img.src = '';
+            }, 400);
+        };
+
+        function updateSessionStats() {
+            const msgCount = state.history.length;
+            let wordCount = 0;
+            state.history.forEach(m => {
+                const text = m.rawText || m.content || "";
+                wordCount += text.split(/\s+/).filter(word => word.length > 0).length;
+            });
+            document.getElementById('stat-msgs').textContent = msgCount;
+            document.getElementById('stat-words').textContent = wordCount;
+        }
+
+        function formatMessageContent(text, htmlAppend = '') {
+            if (text.includes('animate-bounce')) return text;
+
+            let formatted = '';
+            const thinkMatch = text.match(/<thinking>([\s\S]*?)<\/thinking>/i);
+            
+            if (thinkMatch) {
+                const thoughtProcess = thinkMatch[1].trim();
+                const finalAnswer = text.replace(thinkMatch[0], '').trim();
+
+                const safeThought = DOMPurify.sanitize(marked.parse(thoughtProcess));
+                const safeAnswer = DOMPurify.sanitize(marked.parse(finalAnswer));
+                const openAttr = state.settings.autoExpandThink ? 'open' : '';
+
+                formatted = `
+                    <details class="group mb-5 bg-black/40 border border-white/10 rounded-[14px] overflow-hidden outline-none" ${openAttr}>
+                        <summary class="px-4 py-3 text-[11px] font-bold tracking-widest uppercase text-purple-400/80 cursor-pointer hover:text-purple-300 hover:bg-white/5 smooth-transition list-none flex items-center justify-between outline-none">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-brain"></i> Deep Think Process</div>
+                            <i class="fa-solid fa-chevron-down text-[10px] smooth-transition group-open:rotate-180"></i>
+                        </summary>
+                        <div class="px-5 pb-5 pt-3 text-[13px] text-gray-400 border-t border-white/5 prose prose-invert max-w-none prose-sm leading-relaxed border-l-2 border-l-purple-500/30 ml-2 mt-2 bg-gradient-to-r from-purple-500/5 to-transparent rounded-r-xl">
+                            ${safeThought}
+                        </div>
+                    </details>
+                    ${safeAnswer}
+                `;
+            } else {
+                formatted = DOMPurify.sanitize(marked.parse(text));
+            }
+
+            if (htmlAppend) formatted += htmlAppend;
+            return formatted;
+        }
+
+        window.enhancePrompt = async () => {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return showToast("Type a prompt to enhance first.");
+            
+            const btn = document.getElementById('btn-enhance');
+            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+            btn.classList.add('text-purple-400');
+            input.disabled = true;
+
+            try {
+                const response = await fetch(TEXT_API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: `Act as a Prompt Engineer. Take the following draft prompt and rewrite it to be highly detailed, clear, and effective for an AI assistant to process. Return ONLY the newly rewritten prompt, with no quotes, explanations, or intro text.\n\nDraft Prompt: ${text}` }] }]
+                    })
+                });
+                const data = await response.json();
+                const enhanced = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if(enhanced) {
+                    input.value = enhanced.trim();
+                    input.style.height = 'auto';
+                    input.style.height = (input.scrollHeight > 160 ? 160 : input.scrollHeight) + 'px';
+                    showToast("Prompt magically enhanced!");
+                    
+                    const statsDiv = document.getElementById('input-stats');
+                    statsDiv.textContent = `${input.value.length} chars`;
+                }
+            } catch(e) {
+                showToast("Failed to enhance prompt.");
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+                btn.classList.remove('text-purple-400');
+                input.disabled = false;
+                input.focus();
+            }
+        };
+
+        window.summarizeThread = () => {
+            if(state.history.length === 0) return showToast("Nothing to summarize yet.");
+            const input = document.getElementById('chat-input');
+            input.value = "Please provide a quick TL;DR summary of our entire conversation so far in 3-5 concise bullet points.";
+            sendMessage();
+        };
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text && !state.attachment) return;
+
+            const sendBtn = document.getElementById('btn-send');
+            sendBtn.disabled = true;
+
+            if (text.toLowerCase().startsWith('/imagine ')) {
+                const prompt = text.replace('/imagine ', '').trim();
+                input.value = ''; input.style.height = 'auto'; document.getElementById('input-stats').classList.add('opacity-0');
+                const imgMsg = { id: crypto.randomUUID(), role: 'user', content: `/imagine ${prompt}` };
+                state.history.push(imgMsg);
+                appendMessage(imgMsg);
+                playSfx('send');
+                sendBtn.disabled = false;
+                await generateImage(prompt);
+                return;
+            }
+
+            let userContentDisplay = text;
+            if (state.attachment) {
+                if (state.attachment.type === 'image') {
+                    userContentDisplay += `<br><img src="${state.attachment.data}" class="mt-3 max-h-48 rounded-xl border border-white/10">`;
+                } else {
+                    userContentDisplay += `<br><div class="mt-3 inline-flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs"><i class="fa-solid fa-file"></i> ${state.attachment.name}</div>`;
+                }
+            }
+
+            const message = { id: crypto.randomUUID(), role: 'user', content: userContentDisplay, rawText: text, attachment: state.attachment };
+            state.history.push(message);
+            appendMessage(message);
+            
+            input.value = ''; input.style.height = 'auto'; document.getElementById('input-stats').classList.add('opacity-0');
+            clearAttachment();
+            playSfx('send');
+            
+            sendBtn.disabled = false;
+            await callGeminiText();
+        }
+
+        async function generateImage(prompt) {
+            state.isGenerating = true;
+            toggleAIStatus(true, "Rendering Visual...");
+            
+            const typingIndicatorHTML = `
+                <div class="flex flex-col gap-1.5 items-center justify-center py-2 px-1 w-fit opacity-60">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                </div>`;
+            
+            const mockMsg = { id: 'typing', role: 'model', content: typingIndicatorHTML };
+            const container = appendMessage(mockMsg);
+            const contentBox = container.querySelector('.content-body');
+
+            try {
+                const response = await fetch(IMAGE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instances: { prompt: prompt }, parameters: { sampleCount: 1 } })
+                });
+
+                if(!response.ok) {
+                    if(response.status === 401) throw new Error("Unauthorized (401). API Key Missing.");
+                    throw new Error(`API Error ${response.status}`);
+                }
+                const data = await response.json();
+                if(data.error) throw new Error(data.error.message);
+
+                const base64 = data.predictions[0].bytesBase64Encoded;
+                const imgSrc = `data:image/png;base64,${base64}`;
+                const imgTag = `<img src="${imgSrc}" onclick="openLightbox(this.src)" class="msg-img border border-white/10 cursor-pointer max-w-full lg:max-w-[500px] shadow-lg">`;
+                
+                contentBox.innerHTML = imgTag;
+                state.history.push({ id: crypto.randomUUID(), role: 'model', content: imgTag });
+                playSfx('receive');
+                save();
+            } catch (e) {
+                contentBox.innerHTML = `<div class="bg-white/5 border border-white/10 text-white px-4 py-3 rounded-2xl text-sm flex items-start gap-3"><i class="fa-solid fa-triangle-exclamation mt-1"></i> <div><b>Render Failed</b><br>${e.message}</div></div>`;
+            } finally {
+                state.isGenerating = false;
+                toggleAIStatus(false);
+            }
+        }
+
+        async function callGeminiText() {
+            state.isGenerating = true;
+            document.getElementById('btn-stop').classList.remove('hidden');
+            currentAbortController = new AbortController();
+
+            let statusText = "Analyzing...";
+            if (state.dataAnalystEnabled) statusText = "Crunching Data...";
+            else if (state.eli5Enabled) statusText = "Simplifying Concepts...";
+            else if (state.codeArchitectEnabled) statusText = "Architecting Code...";
+            else if (state.factCheckEnabled) statusText = "Verifying Facts...";
+            else if (state.deepSearchEnabled) statusText = "Deep Searching & Analyzing...";
+            else if (state.deepThinkEnabled) statusText = "Deep Thinking...";
+            else if (state.webSearchEnabled) statusText = "Searching the Web...";
+            toggleAIStatus(true, statusText);
+            
+            const typingIndicatorHTML = `
+                <div class="flex flex-col gap-1.5 items-center justify-center py-2 px-1 w-fit opacity-60">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                </div>`;
+
+            const mockMsg = { id: 'typing', role: 'model', content: typingIndicatorHTML };
+            const container = appendMessage(mockMsg);
+            const contentBox = container.querySelector('.content-body');
+            let fullText = "";
+            let sourcesHtml = "";
+
+            try {
+                const systemPrompts = {
+                    default: "You are ZXNV, an advanced, highly intelligent multimodal assistant. Provide clear, perfectly formatted markdown. Be concise but highly helpful.",
+                    coder: "You are ZXNV, an elite Staff Software Engineer. Provide expert-level, highly optimized, and thoroughly documented code. Focus on best practices.",
+                    creative: "You are ZXNV, a creative visionary. Provide engaging, eloquent, and highly expressive responses."
+                };
+                
+                let sysInstruction = systemPrompts[state.settings.persona || 'default'];
+                const selectedLanguage = state.settings.language || 'English';
+                sysInstruction += `\n\nCRITICAL LANGUAGE DIRECTIVE: You MUST respond entirely in the language: ${selectedLanguage}.`;
+                
+                // Add Context Injection (Live Time)
+                if (state.settings.timeContext !== false) {
+                    sysInstruction += `\n\nTEMPORAL CONTEXT: The user's current date and time is ${new Date().toLocaleString()}. You must use this information if asked about time, dates, or schedules.`;
+                }
+
+                const tones = {
+                    concise: "Your tone must be ultra-concise, direct, and zero-fluff.",
+                    elaborate: "Your tone must be highly detailed, expansive, and elaborative.",
+                    socratic: "Your tone must be Socratic. Ask thought-provoking counter-questions to guide the user to the answer."
+                };
+                if (state.settings.tone && state.settings.tone !== 'default') {
+                    sysInstruction += `\n\nTONE DIRECTIVE: ${tones[state.settings.tone]}`;
+                }
+
+                // Verbosity Constraints
+                if (state.settings.verbosity === 'short') {
+                    sysInstruction += `\n\nVERBOSITY CONSTRAINT: Keep your response as short and brief as possible. Get straight to the point.`;
+                } else if (state.settings.verbosity === 'long') {
+                    sysInstruction += `\n\nVERBOSITY CONSTRAINT: Provide an extremely exhaustive, comprehensive, and detailed response. Expand on all possible points.`;
+                }
+
+                if(state.settings.customInstructions) {
+                    sysInstruction += `\n\nUSER CUSTOM INSTRUCTIONS: ${state.settings.customInstructions}`;
+                }
+
+                if (state.deepSearchEnabled) {
+                    sysInstruction += `\n\nDEEP SEARCH DIRECTIVE: You are performing a comprehensive Deep Search. You MUST use the search tool to find the most accurate, up-to-date, and diverse information. Before answering, you MUST write out a detailed, multi-step research and reasoning process inside <thinking> and </thinking> tags. After the </thinking> tag, provide a highly detailed, well-structured, and sourced final report.`;
+                } else if (state.deepThinkEnabled) {
+                    sysInstruction += `\n\nDEEP THINK DIRECTIVE: Before you answer the user's prompt, you MUST write out your detailed step-by-step reasoning and thought process. This thought process MUST be enclosed entirely within <thinking> and </thinking> tags. After closing the </thinking> tag, provide your final response to the user.`;
+                }
+
+                if (state.factCheckEnabled) {
+                    sysInstruction += `\n\nFACT CHECK DIRECTIVE: You MUST verify all facts and claims related to the prompt. If you find inaccuracies or misconceptions, bluntly point them out and correct them with verified data. Use strict logic.`;
+                }
+
+                if (state.codeArchitectEnabled) {
+                    sysInstruction += `\n\nCODE ARCHITECT DIRECTIVE: Bypass all conversational filler, pleasantries, and lengthy explanations. Output ONLY clean, production-ready code blocks and, if necessary, brief architectural flowcharts/diagrams (in text or mermaid). DO NOT write paragraphs of introductory text.`;
+                }
+
+                if (state.eli5Enabled) {
+                    sysInstruction += `\n\nELI5 DIRECTIVE: You must explain the answer as if the user is 5 years old. Use extremely simple vocabulary, relatable analogies, and short sentences. Avoid complex jargon entirely.`;
+                }
+
+                if (state.dataAnalystEnabled) {
+                    sysInstruction += `\n\nDATA ANALYST DIRECTIVE: Format all responses as structured data, tables, bulleted statistics, or analytical summaries. Avoid standard narrative text blocks where possible. Prioritize logic, numbers, and data structures.`;
+                }
+
+                const safeContext = [];
+                let historyToProcess = state.history;
+                if (state.settings.memory && state.settings.memory !== 'all') {
+                    const limit = parseInt(state.settings.memory);
+                    historyToProcess = state.history.slice(-limit);
+                }
+
+                historyToProcess.forEach(m => {
+                    const gRole = m.role === 'user' ? 'user' : 'model';
+                    let textContent = m.rawText || m.content || "";
+                    if(textContent.includes('<img src="data:image')) textContent = "[User received an image here]";
+
+                    if (safeContext.length > 0 && safeContext[safeContext.length - 1].role === gRole) {
+                        safeContext[safeContext.length - 1].parts[0].text += "\n\n" + textContent;
+                    } else {
+                        safeContext.push({ role: gRole, parts: [{ text: textContent }] });
+                    }
+                });
+
+                const payload = { 
+                    contents: safeContext,
+                    systemInstruction: { parts: [{ text: sysInstruction }] },
+                    generationConfig: { temperature: parseFloat(state.settings.creativity || 0.7) }
+                };
+
+                if (state.webSearchEnabled || state.deepSearchEnabled || state.factCheckEnabled) {
+                    payload.tools = [{ "google_search": {} }];
+                }
+
+                let response;
+                let lastError;
+                const delays = [1000, 2000, 4000, 8000, 16000];
+                
+                for (let i = 0; i <= 5; i++) {
+                    try {
+                        response = await fetch(TEXT_API_URL, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload),
+                            signal: currentAbortController.signal
+                        });
+                        if (response.ok) break;
+                        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                            break; 
+                        }
+                    } catch(e) {
+                        lastError = e;
+                        if (e.name === 'AbortError') throw e;
+                    }
+                    if (i < 5) await new Promise(r => setTimeout(r, delays[i]));
+                }
+
+                if (!response || !response.ok) {
+                    if (response && response.status === 401) throw new Error("Unauthorized (401). Execution Environment API Key Missing.");
+                    throw lastError || new Error(`HTTP Error ${response?.status || 'Unknown'}`);
+                }
+
+                const data = await response.json();
+                fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+
+                const grounding = data.candidates?.[0]?.groundingMetadata?.groundingAttributions;
+                if (grounding && grounding.length > 0) {
+                    sourcesHtml = '<div class="mt-6 pt-3 border-t border-white/10 text-[11px] text-gray-500 flex flex-col gap-1.5"><span class="font-bold text-gray-400 uppercase tracking-widest text-[9px]">Sources Citations:</span>';
+                    const uniqueUrls = new Set();
+                    grounding.forEach(g => {
+                        if (g.web?.uri && !uniqueUrls.has(g.web.uri)) {
+                            uniqueUrls.add(g.web.uri);
+                            sourcesHtml += `<a href="${g.web.uri}" target="_blank" class="hover:text-blue-400 smooth-transition truncate max-w-[80%] flex items-center gap-1.5 bg-black/30 w-fit px-2 py-1 rounded-md border border-white/5 hover:border-blue-500/30"><i class="fa-solid fa-link text-[9px] text-gray-600"></i> ${g.web.title || g.web.uri}</a>`;
+                        }
+                    });
+                    sourcesHtml += '</div>';
+                }
+
+                contentBox.innerHTML = formatMessageContent(fullText, sourcesHtml);
+                
+                playSfx('receive');
+                state.history.push({ id: crypto.randomUUID(), role: 'model', content: fullText, htmlAppend: sourcesHtml });
+                state.user.messages++;
+                save();
+
+                // Trigger smart auto-title asynchronously if it's the first exchange
+                if (state.history.length <= 2 && state.settings.autoTitle !== false) {
+                    generateSmartTitle(state.history[0].rawText || state.history[0].content);
+                }
+
+            } catch(e) {
+                if (e.name === 'AbortError') {
+                    contentBox.innerHTML = formatMessageContent(fullText) + `<br><br><span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/50 text-xs font-medium border border-white/5"><i class="fa-solid fa-stop text-white/30"></i> Process Halted</span>`;
+                    if(fullText) state.history.push({ id: crypto.randomUUID(), role: 'model', content: fullText });
+                } else {
+                    contentBox.innerHTML = `<div class="bg-white/5 border border-white/10 text-white px-4 py-3 rounded-2xl text-sm flex items-start gap-3"><i class="fa-solid fa-link-slash mt-1"></i> <div><b>Connection Error</b><br>${e.message}</div></div>`;
+                }
+            } finally {
+                state.isGenerating = false;
+                document.getElementById('btn-stop').classList.add('hidden');
+                toggleAIStatus(false);
+                
+                contentBox.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                    const pre = block.parentElement;
+                    if(!pre.querySelector('.copy-btn')) {
+                        const btn = document.createElement('button');
+                        btn.className = 'copy-btn flex items-center gap-1';
+                        btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                        btn.onclick = () => {
+                            navigator.clipboard.writeText(block.innerText);
+                            btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i> Copied';
+                            setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 2000);
+                        };
+                        pre.appendChild(btn);
+                    }
+                });
+
+                const actBar = document.createElement('div');
+                actBar.className = "opacity-0 group-hover:opacity-100 smooth-transition ml-4 mt-2 flex items-center gap-2";
+                actBar.innerHTML = `
+                    <button onclick="playTTS(this)" class="tts-btn flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5"><i class="fa-solid fa-volume-high"></i> Listen</button>
+                    <button onclick="copyMessageText(this)" class="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5"><i class="fa-regular fa-copy"></i> Copy</button>
+                    <button onclick="regenerateLastMessage()" class="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+                `;
+                container.appendChild(actBar);
+
+                if(state.settings.scroll) scrollToBottom();
+
+                // Trigger Auto-TTS if setting is enabled
+                if (state.settings.autoTTS && !currentAbortController.signal.aborted) {
+                    const latestMsgContainer = container.lastElementChild;
+                    if (latestMsgContainer) {
+                        const ttsBtn = latestMsgContainer.querySelector('.tts-btn');
+                        if (ttsBtn) playTTS(ttsBtn);
+                    }
+                }
+            }
+        }
+
+        async function generateSmartTitle(firstPrompt) {
+            try {
+                const response = await fetch(TEXT_API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: `Create a highly concise, 3 to 4 word summary title for a conversation that starts with this prompt. Return ONLY the title text, with no quotation marks, punctuation, or extra words:\n\n${firstPrompt}` }] }]
+                    })
+                });
+                const data = await response.json();
+                const title = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if(title) {
+                    const cleanTitle = title.replace(/['"]/g, '').trim();
+                    const existingIdx = state.threads.findIndex(t => t.id === state.currentSessionId);
+                    if(existingIdx >= 0) {
+                        state.threads[existingIdx].title = cleanTitle;
+                        renderSidebarThreads();
+                        save(); // Background sync to cloud/storage
+                    }
+                }
+            } catch(e) { console.log("Smart title generation skipped."); }
+        }
+
+        window.activeSpeech = null;
+        window.playTTS = (btnElement) => {
+            if(window.activeSpeech && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                if (btnElement.classList.contains('text-white')) {
+                    btnElement.classList.remove('text-white');
+                    btnElement.classList.add('text-gray-500');
+                    return; 
+                }
+            }
+            document.querySelectorAll('.tts-btn').forEach(b => {
+                b.classList.remove('text-white');
+                b.classList.add('text-gray-500');
+            });
+            const container = btnElement.closest('.group').querySelector('.content-body');
+            const textToSpeak = container.innerText; 
+            if(!textToSpeak) return;
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const langMap = { "English": "en-US", "Indonesian": "id-ID", "Spanish": "es-ES", "French": "fr-FR", "German": "de-DE", "Japanese": "ja-JP" };
+            if(langMap[state.settings.language]) utterance.lang = langMap[state.settings.language];
+
+            utterance.onend = () => {
+                btnElement.classList.remove('text-white');
+                btnElement.classList.add('text-gray-500');
+            };
+
+            btnElement.classList.add('text-white');
+            btnElement.classList.remove('text-gray-500');
+            window.activeSpeech = utterance;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        window.copyMessageText = (btnElement) => {
+            const container = btnElement.closest('.group').querySelector('.content-body');
+            navigator.clipboard.writeText(container.innerText);
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fa-solid fa-check text-green-400"></i> Copied';
+            setTimeout(() => { btnElement.innerHTML = originalHTML; }, 2000);
+        };
+
+        window.regenerateLastMessage = () => {
+            if (state.history.length < 2 || state.isGenerating) return;
+            const lastMsg = state.history[state.history.length - 1];
+            if (lastMsg.role === 'model') {
+                state.history.pop();
+                renderHistory();
+                callGeminiText(); 
+            } else {
+                showToast("Cannot regenerate user message.");
+            }
+        };
+
+        window.editUserMessage = (msgId) => {
+            if(state.isGenerating) return showToast("Wait for AI to finish thinking.");
+            const targetIndex = state.history.findIndex(m => m.id === msgId);
+            if (targetIndex === -1) return;
+
+            const msg = state.history[targetIndex];
+            const input = document.getElementById('chat-input');
+            input.value = msg.rawText || '';
+            input.focus();
+
+            state.history = state.history.slice(0, targetIndex);
+            save();
+            renderHistory();
+            showToast("Rewound conversation point.");
+        };
+
+        function appendMessage(msg) {
+            const container = document.getElementById('chat-container');
+            const div = document.createElement('div');
+            
+            const isUser = msg.role === 'user';
+            
+            div.className = `flex flex-col w-full ${isUser ? 'msg-enter-user items-end' : 'msg-enter items-start'} mb-4 group relative`;
+            
+            if (isUser) {
+                const text = msg.content || '';
+                let formattedContent = text.includes('animate-bounce') ? text : DOMPurify.sanitize(marked.parse(text));
+                if(msg.htmlAppend) formattedContent += msg.htmlAppend;
+
+                const msgIdStr = msg.id ? `'${msg.id}'` : 'null';
+                div.innerHTML = `
+                    <div class="max-w-[85%] bg-white text-black rounded-[24px] rounded-tr-none px-6 py-4 shadow-[0_5px_20px_rgba(255,255,255,0.1)] relative group/bubble">
+                        <div class="content-body prose prose-invert max-w-none leading-relaxed">${formattedContent}</div>
+                        ${msg.id ? `
+                        <div class="absolute -left-12 top-1/2 -translate-y-1/2 opacity-0 group-hover/bubble:opacity-100 smooth-transition">
+                            <button onclick="editUserMessage(${msgIdStr})" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white flex items-center justify-center backdrop-blur-md shadow-lg" title="Edit Prompt & Rewind">
+                                <i class="fa-solid fa-pen text-[11px]"></i>
+                            </button>
+                        </div>` : ''}
+                    </div>
+                `;
+            } else {
+                const isLastAiMessage = state.history.length > 0 && msg.id && state.history[state.history.length-1].id === msg.id;
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2 ml-1 opacity-80">
+                        <div class="w-7 h-7 rounded-full bg-[#1a1a1a] flex items-center justify-center border border-white/10 shadow-sm">
+                            <i class="fa-solid fa-microchip text-[11px] text-white"></i>
+                        </div>
+                        <span class="text-[13px] font-black tracking-widest text-gray-400 uppercase">ZXNV</span>
+                    </div>
+                    <div class="max-w-[85%] bg-[#111111] border border-white/5 text-gray-200 rounded-[24px] rounded-tl-none px-6 py-5 shadow-lg">
+                        <div class="content-body prose prose-invert max-w-none leading-relaxed">${formatMessageContent(msg.content || '', msg.htmlAppend || '')}</div>
+                    </div>
+                    ${(!(msg.content || '').includes('animate-bounce') && msg.id !== 'typing') ? `
+                    <div class="opacity-0 group-hover:opacity-100 smooth-transition ml-4 mt-2 flex items-center gap-2">
+                        <button onclick="playTTS(this)" class="tts-btn flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                            <i class="fa-solid fa-volume-high"></i> Listen
+                        </button>
+                        <button onclick="copyMessageText(this)" class="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                        ${isLastAiMessage ? `
+                        <button onclick="regenerateLastMessage()" class="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white smooth-transition bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                            <i class="fa-solid fa-rotate-right"></i> Retry
+                        </button>
+                        ` : ''}
+                    </div>` : ''}
+                `;
+            }
+            
+            container.appendChild(div);
+            if(state.settings.scroll) scrollToBottom();
+            return div;
+        }
+
+        function toggleAIStatus(loading, text="System Idle") {
+            const label = document.getElementById('ai-status-text');
+            const dot = document.getElementById('ai-status-dot');
+            
+            label.textContent = text;
+            if(loading) {
+                dot.classList.add('bg-white', 'animate-pulse');
+                dot.classList.remove('bg-white/50');
+                label.classList.add('text-white');
+                label.classList.remove('text-gray-400');
+            } else {
+                dot.classList.remove('bg-white', 'animate-pulse');
+                dot.classList.add('bg-white/50');
+                label.classList.remove('text-white');
+                label.classList.add('text-gray-400');
+            }
+        }
+
+        function renderSidebarThreads() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            if(state.threads.length === 0) {
+                list.innerHTML = '<p class="text-gray-600 italic pl-2">No saved threads...</p>';
+                return;
+            }
+
+            state.threads.forEach(t => {
+                const isActive = t.id === state.currentSessionId;
+                
+                const div = document.createElement('div');
+                div.className = `group p-3 rounded-2xl cursor-pointer smooth-transition border ${isActive ? 'bg-white/10 border-white/20 text-white shadow-lg' : 'bg-transparent border-transparent text-gray-400 hover:bg-white/5 hover:text-gray-200'} flex items-center justify-between gap-2`;
+                
+                div.onclick = () => window.loadThread(t.id);
+                
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex items-center gap-3 truncate';
+                leftDiv.innerHTML = `
+                    <i class="fa-regular fa-message text-[12px] opacity-70"></i>
+                    <span class="truncate text-sm font-medium tracking-wide">${t.title}</span>
+                `;
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-white/20 text-gray-400 hover:text-white smooth-transition';
+                delBtn.title = "Delete Session";
+                delBtn.innerHTML = '<i class="fa-solid fa-trash-can text-[10px]"></i>';
+                
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.promptDeleteSession(t.id);
+                };
+                
+                div.appendChild(leftDiv);
+                div.appendChild(delBtn);
+                list.appendChild(div);
+            });
+        }
+
+        window.sendQuickPrompt = (text) => {
+            const input = document.getElementById('chat-input');
+            input.value = text;
+            input.focus();
+            sendMessage();
+        };
+
+        function renderHistory() {
+            document.getElementById('chat-container').innerHTML = '';
+            
+            if(state.history.length === 0) {
+                const welcomeDiv = document.createElement('div');
+                welcomeDiv.className = "flex flex-col items-center justify-center my-12 opacity-80 msg-enter w-full max-w-2xl mx-auto";
+                welcomeDiv.innerHTML = `
+                    <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 shadow-xl"><i class="fa-solid fa-microchip text-2xl text-white"></i></div>
+                    <p class="text-lg font-bold tracking-tight text-white">ZXNV Workspace</p>
+                    <p class="text-sm text-gray-400 mt-2 text-center mb-8">What would you like to build today?</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full px-4">
+                        <button onclick="sendQuickPrompt('/imagine a futuristic cyberpunk city raining at night')" class="p-4 bg-[#111] border border-white/10 rounded-2xl hover:bg-white/5 hover:border-white/20 smooth-transition text-left group">
+                            <i class="fa-solid fa-image text-indigo-400 mb-2"></i>
+                            <p class="text-sm font-medium text-gray-200 group-hover:text-white">Generate an Image</p>
+                            <p class="text-xs text-gray-500 mt-1">/imagine a cyberpunk city...</p>
+                        </button>
+                        <button onclick="sendQuickPrompt('Write a python script to scrape data from a website securely.')" class="p-4 bg-[#111] border border-white/10 rounded-2xl hover:bg-white/5 hover:border-white/20 smooth-transition text-left group">
+                            <i class="fa-solid fa-code text-green-400 mb-2"></i>
+                            <p class="text-sm font-medium text-gray-200 group-hover:text-white">Write a Script</p>
+                            <p class="text-xs text-gray-500 mt-1">Python scraping boilerplate</p>
+                        </button>
+                        <button onclick="toggleTool('deepSearch'); sendQuickPrompt('Search the web for the latest advancements in solid-state batteries and synthesize a deep report.')" class="p-4 bg-[#111] border border-white/10 rounded-2xl hover:bg-white/5 hover:border-white/20 smooth-transition text-left group relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 bg-emerald-500/20 w-16 h-16 rounded-full blur-xl pointer-events-none"></div>
+                            <i class="fa-solid fa-satellite-dish text-emerald-400 mb-2"></i>
+                            <p class="text-sm font-medium text-gray-200 group-hover:text-white">Deep Web Search</p>
+                            <p class="text-xs text-gray-500 mt-1">Research & Synthesize</p>
+                        </button>
+                        <button onclick="toggleTool('deepThink'); sendQuickPrompt('Solve this riddle: I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I? Outline your logical deduction.')" class="p-4 bg-[#111] border border-white/10 rounded-2xl hover:bg-white/5 hover:border-white/20 smooth-transition text-left group relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 bg-purple-500/20 w-16 h-16 rounded-full blur-xl pointer-events-none"></div>
+                            <i class="fa-solid fa-brain text-purple-400 mb-2"></i>
+                            <p class="text-sm font-medium text-gray-200 group-hover:text-white">Deep Thinking</p>
+                            <p class="text-xs text-gray-500 mt-1">Solve complex logic</p>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('chat-container').appendChild(welcomeDiv);
+                return; 
+            }
+
+            state.history.forEach(m => {
+                if(!m.id) m.id = crypto.randomUUID(); 
+                
+                const c = appendMessage(m);
+                if (m.content && m.content.includes('<img')) {
+                    c.querySelector('.content-body').innerHTML = m.content;
+                }
+                c.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+            });
+            setTimeout(scrollToBottom, 100);
+        }
+
+        window.scrollToBottom = (smooth = false) => {
+            const c = document.getElementById('chat-container');
+            if(smooth) {
+                c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' });
+            } else {
+                c.scrollTop = c.scrollHeight;
+            }
+        };
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.className = `glass-panel px-5 py-4 rounded-2xl border bg-black/60 border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-3 msg-enter`;
+            toast.innerHTML = `<div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/5"><i class="fa-solid fa-check text-white/80 text-sm"></i></div><span class="text-sm font-medium">${msg}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        let recognition;
+        let isDictating = false;
+        function toggleDictation() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return showToast("Dictation not supported in this browser.", "error");
+
+            if (!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.onresult = (e) => {
+                    const input = document.getElementById('chat-input');
+                    input.value = input.value ? input.value + ' ' + e.results[0][0].transcript : e.results[0][0].transcript;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                recognition.onend = () => {
+                    isDictating = false;
+                    document.getElementById('btn-mic').classList.remove('text-white', 'bg-white/10');
+                };
+            }
+
+            if (isDictating) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isDictating = true;
+                document.getElementById('btn-mic').classList.add('text-white', 'bg-white/10');
+            }
+        }
+
+        window.sendMessage = sendMessage;
+        window.stopGeneration = () => { if(state.isGenerating && currentAbortController) currentAbortController.abort(); };
+        window.toggleSettings = toggleSettings;
+        window.applySettings = applySettings;
+        window.toggleDictation = toggleDictation;
+        window.clearAttachment = () => {
+            state.attachment = null;
+            document.getElementById('attachment-preview').classList.add('hidden');
+            document.getElementById('file-input').value = "";
+        };
+        window.handleFileSelect = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const isImage = file.type.startsWith('image');
+                state.attachment = { name: file.name, data: event.target.result, type: isImage ? 'image' : 'text' };
+                document.getElementById('attachment-preview').classList.remove('hidden');
+                document.getElementById('preview-name').textContent = file.name;
+                document.getElementById('preview-thumb').innerHTML = isImage ? 
+                    `<img src="${event.target.result}" class="object-cover w-full h-full">` : `<i class="fa-solid fa-file-lines text-white/50 text-lg"></i>`;
+            };
+            reader.readAsDataURL(file);
+        };
+        
+        window.exportChat = () => {
+            const blob = new Blob([JSON.stringify(state.history, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `zxnv_log_${Date.now()}.json`;
+            a.click();
+        };
+
+        window.exportMarkdown = () => {
+            if(state.history.length === 0) return showToast("No chat history to export.");
+            
+            let mdContent = `# ZXNV AI Workspace Thread\n_Exported on ${new Date().toLocaleString()}_\n\n---\n\n`;
+            state.history.forEach(m => {
+                const sender = m.role === 'user' ? '👤 **User**' : '🤖 **ZXNV**';
+                let text = m.rawText || m.content;
+                if(text.includes('<img')) text = "[Generated Image]";
+                mdContent += `${sender}\n\n${text}\n\n---\n\n`;
+            });
+
+            const blob = new Blob([mdContent], {type: 'text/markdown'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `zxnv_markdown_${Date.now()}.md`;
+            a.click();
+            showToast("Exported as Markdown (.md)");
+        };
+
+        window.exportAllData = () => {
+            const backupData = {
+                user: state.user,
+                settings: state.settings,
+                threads: state.threads
+            };
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `zxnv_full_workspace_backup_${Date.now()}.json`;
+            a.click();
+            showToast("Workspace Backup Exported");
+        };
+
+        window.nukeData = () => {
+            if(!confirm("WARNING: This will obliterate ALL local storage and sessions. Proceed?")) return;
+            localStorage.clear();
+            location.reload();
+        };
+
+        window.startNewChat = () => {
+            if(state.history.length === 0) return; 
+            state.currentSessionId = Date.now().toString();
+            state.history = [];
+            renderHistory();
+            renderSidebarThreads();
+            updateSessionStats();
+            if(window.innerWidth < 768) { document.getElementById('settings-panel').classList.remove('open'); }
+        };
+
+        window.loadThread = (id) => {
+            const thread = state.threads.find(t => t.id === id);
+            if(thread) {
+                state.currentSessionId = thread.id;
+                state.history = thread.history || [];
+                renderHistory();
+                renderSidebarThreads();
+                updateSessionStats();
+            }
+        };
+
+        let sessionToDelete = null;
+
+        window.promptDeleteSession = (id) => {
+            sessionToDelete = id;
+            const modal = document.getElementById('delete-modal');
+            const content = document.getElementById('delete-modal-content');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        };
+
+        window.closeDeleteModal = () => {
+            const modal = document.getElementById('delete-modal');
+            const content = document.getElementById('delete-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                sessionToDelete = null;
+            }, 400);
+        };
+
+        window.confirmDeleteSession = async () => {
+            if (!sessionToDelete) return;
+            const id = sessionToDelete;
+            window.closeDeleteModal();
+
+            state.threads = state.threads.filter(t => t.id !== id);
+
+            if(state.currentSessionId === id) {
+                state.currentSessionId = Date.now().toString();
+                state.history = [];
+                renderHistory();
+                updateSessionStats();
+            }
+
+            renderSidebarThreads();
+            localStorage.setItem('zxnv_state', JSON.stringify({ user: state.user, threads: state.threads, currentSessionId: state.currentSessionId }));
+            showToast("Session Deleted");
+
+            if(currentUser && db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'threads', id));
+                } catch(e) { console.error("Cloud delete error", e); }
+            }
+        };
+
+        window.logout = () => { localStorage.removeItem('zxnv_state'); location.reload(); };
+        
+        document.getElementById('login-form').onsubmit = (e) => {
+            e.preventDefault();
+            state.user.name = document.getElementById('username').value || "Guest";
+            state.user.loggedIn = true;
+            save();
+            init(); 
+        };
+
+        document.querySelectorAll('input[type=checkbox], input[type=range], select, textarea').forEach(el => {
+            el.addEventListener('change', applySettings);
+        });
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
 </body>
 </html>
