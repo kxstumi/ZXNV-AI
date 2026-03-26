@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZXNV AI | Smooth Monochrome</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link id="highlight-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-screen w-screen flex antialiased selection:bg-white/30 selection:text-white text-size-normal font-sans smooth-transition" id="app-body">
+
+    <div id="lightbox-modal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/95 backdrop-blur-xl smooth-transition opacity-0" onclick="toggleLightbox()">
+        <img id="lightbox-img" class="max-w-[90vw] max-h-[90vh] rounded-2xl border border-white/10 object-contain shadow-[0_0_50px_rgba(255,255,255,0.1)] smooth-transition transform scale-95">
+        <button class="absolute top-8 right-8 text-white/50 hover:text-white text-3xl smooth-transition bg-white/5 hover:bg-white/10 w-12 h-12 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div id="delete-modal" class="fixed inset-0 z-[250] hidden items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 smooth-transition">
+        <div class="glass-panel p-8 w-full max-w-sm rounded-[24px] shadow-2xl border border-white/10 text-center transform scale-95 smooth-transition" id="delete-modal-content">
+            <div class="w-16 h-16 bg-red-500/10 rounded-full mx-auto flex items-center justify-center mb-4 border border-red-500/20">
+                <i class="fa-solid fa-trash-can text-2xl text-red-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Delete Session?</h3>
+            <p class="text-sm text-gray-400 mb-8">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button onclick="closeDeleteModal()" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-medium smooth-transition">Cancel</button>
+                <button onclick="confirmDeleteSession()" class="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold smooth-transition shadow-[0_0_15px_rgba(239,68,68,0.3)]">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-2xl">
+        <div class="glass-panel p-12 w-full max-w-md rounded-[2rem] shadow-2xl msg-enter">
+            <div class="w-20 h-20 bg-white/10 rounded-3xl mx-auto flex items-center justify-center mb-8 border border-white/10 shadow-inner">
+                <i class="fa-solid fa-microchip text-4xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-black tracking-tight mb-2 text-center">ZXNV AI</h1>
+            <p class="text-sm text-gray-400 mb-8 text-center">Smooth Monochrome</p>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <input type="text" id="username" required class="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-white outline-none smooth-transition text-sm" placeholder="Enter your identifier...">
+                </div>
+                <button type="submit" class="w-full bg-white text-black hover:bg-gray-200 py-4 rounded-2xl text-sm font-bold tracking-wide smooth-transition shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                    Initialize Workspace
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <aside class="w-[300px] border-r border-white/5 flex-shrink-0 flex flex-col hidden md:flex bg-[#030303] z-20 smooth-transition">
+        <div class="h-20 border-b border-white/5 flex items-center justify-between px-8">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
+                    <div class="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" id="cloud-sync-icon"></div>
+                </div>
+                <span class="font-black tracking-tighter text-xl">ZXNV</span>
+            </div>
+            <button onclick="toggleSettings()" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 smooth-transition">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
+        </div>
+
+        <div class="p-6 border-b border-white/5">
+            <button onclick="startNewChat()" class="w-full bg-white/5 hover:bg-white text-gray-300 hover:text-black border border-white/10 hover:border-white py-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold smooth-transition shadow-lg">
+                <i class="fa-solid fa-plus"></i> New Thread
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 no-scrollbar">
+            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 mb-2">Saved Threads</div>
+            <div id="history-list" class="space-y-2 font-sans text-xs">
+                <p class="text-gray-600 italic pl-2">Syncing to cloud...</p>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-white/5 bg-black/20">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Session Intel</span>
+            </div>
+            <div class="flex gap-2">
+                <div class="flex-1 bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center">
+                    <i class="fa-regular fa-comments text-gray-400 mb-1 text-xs"></i>
+                    <span id="stat-msgs" class="font-mono text-sm font-bold text-white">0</span>
+                </div>
+                <div class="flex-1 bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center">
+                    <i class="fa-solid fa-font text-gray-400 mb-1 text-xs"></i>
+                    <span id="stat-words" class="font-mono text-sm font-bold text-white">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-white/5 bg-black/40">
+            <div class="flex items-center justify-between glass-panel p-3 rounded-2xl border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm border border-white/10">U</div>
+                    <div class="flex flex-col">
+                        <span id="user-display-name" class="text-sm font-bold truncate max-w-[100px]">User</span>
+                        <span class="text-[10px] text-gray-500">Ultra Plan</span>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-8 h-8 rounded-full hover:bg-white/10 text-gray-500 hover:text-red-400 smooth-transition flex items-center justify-center" title="Log Out">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative bg-transparent smooth-transition">
+        <header class="absolute top-0 inset-x-0 h-20 flex items-center justify-between px-6 md:px-10 z-30 bg-gradient-to-b from-[#050505] to-transparent pointer-events-none smooth-transition">
+            <div class="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-white/5">
+                <div class="w-2 h-2 rounded-full bg-white/50" id="ai-status-dot"></div>
+                <span class="text-[11px] font-medium tracking-wide text-gray-400 uppercase" id="ai-status-text">System Idle</span>
+            </div>
+            <div class="flex items-center gap-3 pointer-events-auto">
+                <button onclick="toggleZenMode()" class="h-10 w-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center justify-center"><i class="fa-solid fa-expand"></i></button>
+                <button onclick="summarizeThread()" class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2 hidden md:flex"><i class="fa-solid fa-bolt"></i> TL;DR</button>
+                <div class="relative group">
+                    <button class="h-10 px-4 rounded-full bg-black/40 backdrop-blur-xl border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 smooth-transition text-xs font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i> Export <i class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-32 glass-panel border border-white/10 rounded-2xl overflow-hidden opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto smooth-transition shadow-2xl">
+                        <button onclick="exportMarkdown()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2"><i class="fa-brands fa-markdown"></i> .MD</button>
+                        <button onclick="exportChat()" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center gap-2 border-t border-white/5"><i class="fa-solid fa-code"></i> .JSON</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div id="chat-container" class="flex-1 overflow-y-auto px-4 md:px-24 pt-28 pb-48 scroll-smooth flex flex-col gap-8 relative">
+            </div>
+
+        <div class="absolute bottom-6 inset-x-6 md:inset-x-24 z-30">
+            <div class="max-w-4xl mx-auto relative">
+                <div id="attachment-preview" class="hidden mb-4 p-2 pl-3 glass-panel rounded-2xl flex items-center gap-4 w-fit shadow-lg msg-enter">
+                    <div id="preview-thumb" class="w-10 h-10 bg-black/50 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden"></div>
+                    <span id="preview-name" class="text-xs font-medium text-gray-300 max-w-[200px] truncate"></span>
+                    <button onclick="clearAttachment()" class="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 smooth-transition"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="glass-panel p-2 rounded-[2rem] flex items-end gap-2 shadow-[0_20px_40px_rgba(0,0,0,0.4)] border border-white/10 relative">
+                    <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
+                    <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition"><i class="fa-solid fa-paperclip text-lg"></i></button>
+                    
+                    <div class="relative" id="tools-dropdown-container">
+                        <button id="btn-tools" onclick="toggleToolsMenu(event)" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 smooth-transition relative">
+                            <i class="fa-solid fa-layer-group text-lg"></i>
+                            <div id="tools-active-dot" class="absolute top-2 right-2 w-2 h-2 rounded-full hidden"></div>
+                        </button>
+                        <div id="tools-menu" class="absolute bottom-[calc(100%+16px)] left-0 w-56 glass-panel border border-white/10 rounded-2xl overflow-hidden opacity-0 pointer-events-none smooth-transition shadow-2xl flex flex-col z-50 transform translate-y-2">
+                            <button onclick="toggleTool('webSearch', event)" id="tool-websearch" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-globe text-blue-400"></i> Web Search</span>
+                                <i class="fa-solid fa-circle-check text-blue-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                            <button onclick="toggleTool('deepThink', event)" id="tool-deepthink" class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:text-white hover:bg-white/10 smooth-transition flex items-center justify-between border-b border-white/5">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-brain text-purple-400"></i> Deep Think</span>
+                                <i class="fa-solid fa-circle-check text-purple-400 opacity-0 tool-check smooth-transition scale-75"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea id="chat-input" rows="1" class="flex-1 bg-transparent border-none outline-none py-4 px-2 text-[15px] resize-none text-white no-scrollbar max-h-40 placeholder-gray-600 relative z-10" placeholder="Message ZXNV..."></textarea>
+                    <button id="btn-enhance" onclick="enhancePrompt()" class="w-10 h-10 mr-1 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 smooth-transition"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                    <button id="btn-send" onclick="sendMessage()" class="w-12 h-12 flex-shrink-0 bg-white text-black hover:bg-gray-200 hover:scale-105 active:scale-95 rounded-full flex items-center justify-center smooth-transition disabled:opacity-50 shadow-[0_0_15px_rgba(255,255,255,0.2)] relative z-10"><i class="fa-solid fa-arrow-up text-lg"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-panel" class="settings-panel fixed top-0 right-0 h-full w-full md:w-[400px] glass-panel border-l border-white/10 z-50 p-8 shadow-2xl overflow-y-auto pb-24">
+            <div class="flex justify-between items-center mb-8 border-b border-white/5 pb-6">
+                <h3 class="text-xl font-bold tracking-tight">Preferences</h3>
+                <button onclick="toggleSettings()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center smooth-transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="space-y-8">
+                <div class="space-y-4">
+                    <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">Interface</label>
+                    <div class="glass-panel p-4 rounded-3xl space-y-4 border border-white/5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Haptic Audio</span>
+                            <input type="checkbox" id="setting-sound" checked>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">Auto-Focus Scroll</span>
+                            <input type="checkbox" id="setting-scroll" checked>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container" class="fixed bottom-32 right-6 z-[200] flex flex-col gap-3 pointer-events-none"></div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
